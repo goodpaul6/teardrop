@@ -857,17 +857,6 @@ const Store = struct {
     }
 };
 
-// Export C functions to use our store from any language
-const CBuffer = extern struct {
-    ptr: [*c]u8,
-    len: u64,
-};
-
-const EMPTY_C_BUFFER = CBuffer{
-    .ptr = null,
-    .len = 0,
-};
-
 export fn Store_create(dir_path: [*:0]const u8, max_segment_size: u64) ?*Store {
     const dir_path_slice = std.mem.span(dir_path);
     const store = std.heap.c_allocator.create(Store) catch return null;
@@ -877,22 +866,17 @@ export fn Store_create(dir_path: [*:0]const u8, max_segment_size: u64) ?*Store {
     return store;
 }
 
-export fn Store_getAllocValue(store: *Store, key: [*:0]const u8) CBuffer {
+export fn Store_get(store: *Store, key: [*:0]const u8, createBufferFn: *const fn (u64) callconv(.C) [*c]u8) bool {
     const key_slice = std.mem.span(key);
 
-    var proxy = store.get(key_slice) orelse return EMPTY_C_BUFFER;
+    var proxy = store.get(key_slice) orelse return false;
     defer proxy.deinit();
 
-    const ptr = proxy.readAlloc(std.heap.c_allocator) catch return EMPTY_C_BUFFER;
+    const buf = createBufferFn(proxy.len);
 
-    return .{
-        .ptr = ptr.ptr,
-        .len = proxy.len,
-    };
-}
+    _ = proxy.readInto(buf[0..proxy.len]) catch return false;
 
-export fn CBuffer_free(buf: *CBuffer) void {
-    std.c.free(buf.ptr);
+    return true;
 }
 
 const temp_prefix = "tmp/";
