@@ -891,6 +891,10 @@ export fn Store_getAllocValue(store: *Store, key: [*:0]const u8) CBuffer {
     };
 }
 
+export fn CBuffer_free(buf: *CBuffer) void {
+    std.c.free(buf.ptr);
+}
+
 const temp_prefix = "tmp/";
 const TempPath = [temp_prefix.len + rand_path_len]u8;
 
