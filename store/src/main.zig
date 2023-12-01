@@ -237,6 +237,7 @@ const SegmentFile = struct {
             self.file.close();
 
             if (self.delete_on_close) {
+                // TODO(Apaar): We should probably panic in the catch IDK
                 self.dir.deleteFile(self.sub_path) catch {};
             }
 
@@ -254,7 +255,7 @@ const SegmentFile = struct {
     }
 };
 
-const Store = struct {
+pub const Store = struct {
     allocator: Allocator,
     dir_path: []const u8,
     max_segment_size: u64,
@@ -271,15 +272,14 @@ const Store = struct {
 
     /// The store takes ownership of the given `dir`.
     pub fn init(allocator: Allocator, dir_path: []const u8, max_segment_size: u64) !Self {
-        var dir_path_copy = try allocator.alloc(u8, dir_path.len);
-        errdefer allocator.free(dir_path_copy);
-
-        @memcpy(dir_path_copy, dir_path);
-
         // We have to use indirection here because we need the pointer to be stable (it escapes this scope and
         // store could move around anywhere).
         var dir_ptr = try allocator.create(std.fs.IterableDir);
         dir_ptr.* = try std.fs.cwd().makeOpenPathIterable(dir_path, .{});
+
+        // It will be freed by the `errdefer self.deinit` below
+        var dir_path_copy = try allocator.alloc(u8, dir_path.len);
+        @memcpy(dir_path_copy, dir_path);
 
         var self = Self{
             .allocator = allocator,
@@ -667,9 +667,6 @@ const Store = struct {
         // max_segment_size for an "inactive" segment.
         const compacted_file_path = randPath();
 
-        var compacted_file = try SegmentFile.create(self.allocator, &self.dir.dir, &compacted_file_path, .{ .read = true });
-        errdefer compacted_file.unref();
-
         var temp_key_buf = std.ArrayList(u8).init(self.allocator);
         defer temp_key_buf.deinit();
 
@@ -728,6 +725,9 @@ const Store = struct {
         if (compactable_files.items.len == 0) {
             return;
         }
+
+        var compacted_file = try SegmentFile.create(self.allocator, &self.dir.dir, &compacted_file_path, .{ .read = true });
+        errdefer compacted_file.unref();
 
         std.sort.insertion(File, compactable_files.items, {}, compareFilesLastModifiedTime);
 
@@ -842,9 +842,9 @@ const Store = struct {
         self.lock.lock();
         defer self.lock.unlock();
 
-        for (0..self.segment_files.items.len - 1) |segment_file_index| {
-            self.segment_files.items[segment_file_index].delete_on_close = true;
-            self.segment_files.items[segment_file_index].unref();
+        for (self.segment_files.items[0..(self.segment_files.items.len - 1)]) |segment_file| {
+            segment_file.delete_on_close = true;
+            segment_file.unref();
         }
 
         var active_segment_file = self.segment_files.getLast();
@@ -857,24 +857,67 @@ const Store = struct {
     }
 };
 
-export fn Store_create(dir_path: [*:0]const u8, max_segment_size: u64) ?*Store {
+// TODO(Apaar): Receive an allocator-like thing. Python code or other similar garbage collected languages
+// could simply pass along an allocator fn (similar to `createBufferFn` in `Store_get` below) and we'll
+// fill in the allocator vtable accordingly.
+//
+// Of course, the Allocator.VTable would need to outlive this call so we'll use the allocator to allocate the VTable too.
+export fn Store_create(dir_path: [*:0]const u8, max_segment_size: u64, err_buf_len: u64, err_buf: [*c]u8) ?*Store {
     const dir_path_slice = std.mem.span(dir_path);
     const store = std.heap.c_allocator.create(Store) catch return null;
 
-    store.* = Store.init(std.heap.c_allocator, dir_path_slice, max_segment_size) catch return null;
+    store.* = Store.init(std.heap.c_allocator, dir_path_slice, max_segment_size) catch |err| {
+        _ = std.fmt.bufPrintZ(err_buf[0..err_buf_len], "Failed to open store: {s}", .{@errorName(err)}) catch {};
+        return null;
+    };
 
     return store;
 }
 
-export fn Store_get(store: *Store, key: [*:0]const u8, createBufferFn: *const fn (u64) callconv(.C) [*c]u8) bool {
-    const key_slice = std.mem.span(key);
+export fn Store_destroy(store: *Store) void {
+    store.deinit();
 
-    var proxy = store.get(key_slice) orelse return false;
+    std.heap.c_allocator.destroy(store);
+}
+
+// TODO(Apaar): In this case, returning false means either there was an error or the value didn't exist.
+// We should probably return an enum-like thing for these cases. Right now I'm just hacking it by setting
+// err_buf[0] = 0 in the python and then checking if it is not null after the fn call.
+export fn Store_get(store: *Store, key_len: u64, key: [*c]const u8, createBufferFn: *const fn (u64) callconv(.C) [*c]u8, err_buf_len: u64, err_buf: [*c]u8) bool {
+    var proxy = store.get(key[0..key_len]) orelse return false;
     defer proxy.deinit();
 
     const buf = createBufferFn(proxy.len);
 
-    _ = proxy.readInto(buf[0..proxy.len]) catch return false;
+    _ = proxy.readInto(buf[0..proxy.len]) catch |err| {
+        _ = std.fmt.bufPrintZ(err_buf[0..err_buf_len], "Failed to get key: {s}", .{@errorName(err)}) catch {};
+        return false;
+    };
+
+    return true;
+}
+
+export fn Store_set(store: *Store, key_len: u64, key: [*c]const u8, value_len: u64, value: [*c]const u8, err_buf_len: u64, err_buf: [*c]u8) bool {
+    store.setAllocKey(key[0..key_len], value[0..value_len]) catch |err| {
+        _ = std.fmt.bufPrintZ(err_buf[0..err_buf_len], "Failed to set key: {s}", .{@errorName(err)}) catch {};
+        return false;
+    };
+
+    return true;
+}
+
+export fn Store_del(store: *Store, key_len: u64, key: [*c]const u8, err_buf_len: u64, err_buf: [*c]u8) bool {
+    return store.del(key[0..key_len]) catch |err| {
+        _ = std.fmt.bufPrintZ(err_buf[0..err_buf_len], "Failed to delete key: {s}", .{@errorName(err)}) catch {};
+        return false;
+    };
+}
+
+export fn Store_compactForMillis(store: *Store, ms: u64, err_buf_len: u64, err_buf: [*c]u8) bool {
+    store.compactForMillis(ms) catch |err| {
+        _ = std.fmt.bufPrintZ(err_buf[0..err_buf_len], "Failed to compact store: {s}", .{@errorName(err)}) catch {};
+        return false;
+    };
 
     return true;
 }

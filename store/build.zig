@@ -31,6 +31,20 @@ pub fn build(b: *std.Build) void {
     // running `zig build`).
     b.installArtifact(lib);
 
+    const benchmark = b.addExecutable(.{
+        .name = "teardrop-benchmark",
+        .root_source_file = .{ .path = "src/benchmark.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+
+    benchmark.linkLibC();
+
+    const run_benchmark = b.addRunArtifact(benchmark);
+
+    const benchmark_step = b.step("benchmark", "Benchmark key value store.");
+    benchmark_step.dependOn(&run_benchmark.step);
+
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
     const main_tests = b.addTest(.{
