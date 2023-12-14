@@ -45,7 +45,7 @@ class Store:
         )
 
         if not self._store:
-            raise Exception(f'Failed to open teardrop store: {self._err_buf.value}')
+            raise Exception(f'Failed to open teardrop store: {self._err_buf.value.decode()}')
 
     def _call_with_err_buf(self, fn, *args):
         self._err_buf[0] = 0
@@ -88,7 +88,7 @@ class Store:
         self._call_with_err_buf(_Store_set, self._store, len(key), key, len(value), value)
 
     def delete(self, key: bytes) -> bool:
-        self._call_with_err_buf(_Store_del, self._store, len(key), key)
+        return self._call_with_err_buf(_Store_del, self._store, len(key), key)
 
     def compact_for_millis(self, ms: int):
-        self._call_with_err_buf(_Store_compactForMillis, self._store, ms)
+        return self._call_with_err_buf(_Store_compactForMillis, self._store, ms)

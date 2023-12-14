@@ -1,1 +1,3 @@
 black
+grpcio
+grpcio-tools

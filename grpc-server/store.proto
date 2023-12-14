@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+service Store {
+    // TODO(Apaar): Might wanna make this a streamable reply
+    rpc Get (GetRequest) returns (GetReply) {}  
+    rpc Set (SetRequest) returns (SetReply) {}
+}
+
+message GetRequest {
+    bytes key = 1;
+}
+
+message SetRequest {
+    bytes key = 2;
+    bytes value = 3;
+}
+
+message GetReply {
+    bytes value = 4; 
+}
+
+message SetReply {}
