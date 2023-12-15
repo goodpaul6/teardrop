@@ -27,3 +27,15 @@ class GetReply(_message.Message):
 class SetReply(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
+
+class DelRequest(_message.Message):
+    __slots__ = ("key",)
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    key: bytes
+    def __init__(self, key: _Optional[bytes] = ...) -> None: ...
+
+class DelReply(_message.Message):
+    __slots__ = ("deleted",)
+    DELETED_FIELD_NUMBER: _ClassVar[int]
+    deleted: bool
+    def __init__(self, deleted: bool = ...) -> None: ...

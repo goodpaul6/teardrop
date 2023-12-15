@@ -22,6 +22,11 @@ class Store(store_pb2_grpc.StoreServicer):
 
         return store_pb2.SetReply()
 
+    def Del(self, request: store_pb2.DelRequest, context):
+        res = self.store.delete(request.key)
+
+        return store_pb2.DelReply(deleted=res)
+
 def serve():
     port = sys.argv[2]
     server = grpc.server(concurrent.futures.ThreadPoolExecutor(max_workers=10))

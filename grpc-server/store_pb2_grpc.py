@@ -24,6 +24,11 @@ class StoreStub(object):
                 request_serializer=store__pb2.SetRequest.SerializeToString,
                 response_deserializer=store__pb2.SetReply.FromString,
                 )
+        self.Del = channel.unary_unary(
+                '/Store/Del',
+                request_serializer=store__pb2.DelRequest.SerializeToString,
+                response_deserializer=store__pb2.DelReply.FromString,
+                )
 
 
 class StoreServicer(object):
@@ -42,6 +47,12 @@ class StoreServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Del(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_StoreServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -54,6 +65,11 @@ def add_StoreServicer_to_server(servicer, server):
                     servicer.Set,
                     request_deserializer=store__pb2.SetRequest.FromString,
                     response_serializer=store__pb2.SetReply.SerializeToString,
+            ),
+            'Del': grpc.unary_unary_rpc_method_handler(
+                    servicer.Del,
+                    request_deserializer=store__pb2.DelRequest.FromString,
+                    response_serializer=store__pb2.DelReply.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -96,5 +112,22 @@ class Store(object):
         return grpc.experimental.unary_unary(request, target, '/Store/Set',
             store__pb2.SetRequest.SerializeToString,
             store__pb2.SetReply.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Del(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Store/Del',
+            store__pb2.DelRequest.SerializeToString,
+            store__pb2.DelReply.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0bstore.proto\"\x19\n\nGetRequest\x12\x0b\n\x03key\x18\x01 \x01(\x0c\"(\n\nSetRequest\x12\x0b\n\x03key\x18\x02 \x01(\x0c\x12\r\n\x05value\x18\x03 \x01(\x0c\"\x19\n\x08GetReply\x12\r\n\x05value\x18\x04 \x01(\x0c\"\n\n\x08SetReply2I\n\x05Store\x12\x1f\n\x03Get\x12\x0b.GetRequest\x1a\t.GetReply\"\x00\x12\x1f\n\x03Set\x12\x0b.SetRequest\x1a\t.SetReply\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0bstore.proto\"\x19\n\nGetRequest\x12\x0b\n\x03key\x18\x01 \x01(\x0c\"(\n\nSetRequest\x12\x0b\n\x03key\x18\x02 \x01(\x0c\x12\r\n\x05value\x18\x03 \x01(\x0c\"\x19\n\x08GetReply\x12\r\n\x05value\x18\x04 \x01(\x0c\"\n\n\x08SetReply\"\x19\n\nDelRequest\x12\x0b\n\x03key\x18\x05 \x01(\x0c\"\x1b\n\x08\x44\x65lReply\x12\x0f\n\x07\x64\x65leted\x18\x06 \x01(\x08\x32j\n\x05Store\x12\x1f\n\x03Get\x12\x0b.GetRequest\x1a\t.GetReply\"\x00\x12\x1f\n\x03Set\x12\x0b.SetRequest\x1a\t.SetReply\"\x00\x12\x1f\n\x03\x44\x65l\x12\x0b.DelRequest\x1a\t.DelReply\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -29,6 +29,10 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_GETREPLY']._serialized_end=109
   _globals['_SETREPLY']._serialized_start=111
   _globals['_SETREPLY']._serialized_end=121
-  _globals['_STORE']._serialized_start=123
-  _globals['_STORE']._serialized_end=196
+  _globals['_DELREQUEST']._serialized_start=123
+  _globals['_DELREQUEST']._serialized_end=148
+  _globals['_DELREPLY']._serialized_start=150
+  _globals['_DELREPLY']._serialized_end=177
+  _globals['_STORE']._serialized_start=179
+  _globals['_STORE']._serialized_end=285
 # @@protoc_insertion_point(module_scope)

@@ -4,6 +4,7 @@ service Store {
     // TODO(Apaar): Might wanna make this a streamable reply
     rpc Get (GetRequest) returns (GetReply) {}  
     rpc Set (SetRequest) returns (SetReply) {}
+    rpc Del (DelRequest) returns (DelReply) {}
 }
 
 message GetRequest {
@@ -20,3 +21,11 @@ message GetReply {
 }
 
 message SetReply {}
+
+message DelRequest {
+    bytes key = 5;
+}
+
+message DelReply {
+    bool deleted = 6;
+}

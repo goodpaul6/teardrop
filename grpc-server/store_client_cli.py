@@ -34,6 +34,16 @@ def run():
                 )
 
                 print(response)
+            elif cmd == "del":
+                key = input("key > ")
+
+                response = stub.Del(
+                    store_pb2.DelRequest(
+                        key=bytes(key, "utf-8")
+                    )
+                )
+
+                print(response)
             elif cmd == "quit":
                 break
             else:
